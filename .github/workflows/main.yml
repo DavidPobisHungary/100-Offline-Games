@@ -7,7 +7,8 @@ on:
 
 jobs:
   build-and-compile:
-    runs-on: macos-14
+    # A macos-12 egy Intel gép, ezen hibátlanul lefut a régi Unity 5.6 telepítője!
+    runs-on: macos-12
     steps:
     - name: Checkout Source Code
       uses: actions/checkout@v4
@@ -34,11 +35,9 @@ jobs:
     - name: Locate and Package IPA (Filza-Friendly)
       run: |
         mkdir -p Payload
-        # Az IFS= beállítás segít, hogy a szóközöket is egyben kezelje a gép
         find . -name "*.app" -type d | while read -r APP_PATH; do
           if [ -d "$APP_PATH" ]; then
             echo "Megtalált mappa: $APP_PATH"
-            # Idézőjelek közé tesszük az elérést a szóközök miatt
             cp -r "$APP_PATH" Payload/
           fi
         done
