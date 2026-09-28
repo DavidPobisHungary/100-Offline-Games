@@ -1,0 +1,59 @@
+name: Build iPhone 4 IPA (iOS 7)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-compile:
+    runs-on: macos-13
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Cache Unity Installation
+      uses: actions/cache@v4
+      with:
+        path: /Applications/Unity
+        key: unity-5.6.7f1-macos
+
+    - name: Download and Install Unity 5.6.7f1
+      run: |
+        if [ ! -d "/Applications/Unity" ]; then
+          echo "Unity not cached. Downloading..."
+          curl -o Unity.pkg https://unity3d.com
+          sudo installer -pkg Unity.pkg -target /
+          rm Unity.pkg
+        else
+          echo "Unity found in cache!"
+        fi
+
+    - name: Run Unity Export
+      run: |
+        /Applications/Unity/Unity.app/Contents/MacOS/Unity \
+          -batchmode \
+          -quit \
+          -projectPath . \
+          -buildTarget ios \
+          -executeMethod UnityEditor.BuildPlayerWindow.BuildPlayerAndRun \
+          -logFile unity_build.log || true
+        cat unity_build.log
+
+    - name: Locate and Package IPA (Filza-Friendly)
+      run: |
+        mkdir -p Payload
+        # Megkeressük a generált .app mappát
+        APP_PATH=$(find . -name "*.app" -type d | head -n 1)
+        if [ -z "$APP_PATH" ]; then
+          echo "Hiba: Nem található a .app fájl! Ellenőrizd a logokat."
+          exit 1
+        fi
+        cp -r "$APP_PATH" Payload/
+        zip -r iPhone4Rajzolo.ipa Payload
+        
+    - name: Upload IPA to GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: iPhone4-App-IPA
+        path: iPhone4Rajzolo.ipa
