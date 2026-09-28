@@ -7,15 +7,21 @@ on:
 
 jobs:
   build-and-compile:
-    # A macos-12 egy Intel gép, ezen hibátlanul lefut a régi Unity 5.6 telepítője!
-    runs-on: macos-12
+    # Visszatérünk a létező és működő modern M1 Mac géphez
+    runs-on: macos-14
     steps:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
+    - name: Install Rosetta 2 for Old Intel Unity
+      run: |
+        echo "Rosetta 2 bekapcsolása a régi Intel szoftverekhez..."
+        # Ez a parancs megtanítja az M1 Macet a régi Intel kódok olvasására
+        softwareupdate --install-rosetta --agree-to-license
+
     - name: Download and Install Unity 5.6.7f1
       run: |
-        echo "Unity letöltése indul..."
+        echo "Unity letöltése..."
         curl -L -f -o Unity.pkg "https://unity3d.com"
         echo "Letöltés kész, telepítés indul..."
         sudo installer -pkg Unity.pkg -target /
@@ -23,7 +29,9 @@ jobs:
 
     - name: Run Unity Export
       run: |
-        /Applications/Unity/Unity.app/Contents/MacOS/Unity \
+        echo "iOS projekt generálása indul..."
+        # Az arch -x86_64 parancs kényszeríti ki, hogy Intel módban fusson a Unity 5.6
+        arch -x86_64 /Applications/Unity/Unity.app/Contents/MacOS/Unity \
           -batchmode \
           -quit \
           -projectPath . \
