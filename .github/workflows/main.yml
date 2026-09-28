@@ -20,11 +20,12 @@ jobs:
     - name: Download and Install Unity 5.6.7f1
       run: |
         echo "Unity letöltése..."
-        curl -L -f -o Unity.pkg "https://unity3d.com"
-        echo "Letöltés kész, Intel emulált telepítés indul..."
-        # Az arch -x86_64 parancs kényszeríti ki, hogy az installer Intel módban fusson le!
-        sudo arch -x86_64 installer -pkg Unity.pkg -target /
-        rm Unity.pkg
+        # We download the file directly without forcing a broken shortcut name
+        curl -L -f -O "https://unity3d.com"
+        echo "Letöltés kész, telepítés indul..."
+        # We use the EXACT name the file has on the disk!
+        sudo arch -x86_64 installer -pkg Unity-5.6.7f1.pkg -target /
+        rm Unity-5.6.7f1.pkg
 
     - name: Run Unity Export
       run: |
