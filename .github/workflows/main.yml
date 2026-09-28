@@ -16,17 +16,19 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /Applications/Unity
-        key: unity-5.6.7f1-macos
-
     - name: Download and Install Unity 5.6.7f1
       run: |
         if [ ! -d "/Applications/Unity" ]; then
           echo "Unity not cached. Downloading..."
-          curl -o Unity.pkg https://unity3d.com
+          # A -L és -f kapcsolók biztosítják, hogy megvárja a letöltést és ne hibázzon el
+          curl -L -f -o Unity.pkg "https://unity3d.com"
+          echo "Letöltés kész, telepítés indul..."
           sudo installer -pkg Unity.pkg -target /
           rm Unity.pkg
         else
           echo "Unity found in cache!"
+        fi
+
         fi
 
     - name: Run Unity Export
