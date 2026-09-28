@@ -12,24 +12,13 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    - name: Cache Unity Installation
-      uses: actions/cache@v4
-      with:
-        path: /Applications/Unity
     - name: Download and Install Unity 5.6.7f1
       run: |
-        if [ ! -d "/Applications/Unity" ]; then
-          echo "Unity not cached. Downloading..."
-          # A -L és -f kapcsolók biztosítják, hogy megvárja a letöltést és ne hibázzon el
-          curl -L -f -o Unity.pkg "https://unity3d.com"
-          echo "Letöltés kész, telepítés indul..."
-          sudo installer -pkg Unity.pkg -target /
-          rm Unity.pkg
-        else
-          echo "Unity found in cache!"
-        fi
-
-        fi
+        echo "Unity letöltése indul..."
+        curl -L -f -o Unity.pkg "https://unity3d.com"
+        echo "Letöltés kész, telepítés indul..."
+        sudo installer -pkg Unity.pkg -target /
+        rm Unity.pkg
 
     - name: Run Unity Export
       run: |
@@ -45,17 +34,18 @@ jobs:
     - name: Locate and Package IPA (Filza-Friendly)
       run: |
         mkdir -p Payload
-        # Megkeressük a generált .app mappát
-        APP_PATH=$(find . -name "*.app" -type d | head -n 1)
-        if [ -z "$APP_PATH" ]; then
-          echo "Hiba: Nem található a .app fájl! Ellenőrizd a logokat."
-          exit 1
-        fi
-        cp -r "$APP_PATH" Payload/
-        zip -r iPhone4Rajzolo.ipa Payload
+        # Az IFS= beállítás segít, hogy a szóközöket is egyben kezelje a gép
+        find . -name "*.app" -type d | while read -r APP_PATH; do
+          if [ -d "$APP_PATH" ]; then
+            echo "Megtalált mappa: $APP_PATH"
+            # Idézőjelek közé tesszük az elérést a szóközök miatt
+            cp -r "$APP_PATH" Payload/
+          fi
+        done
+        zip -r "100_Offline_Games.ipa" Payload
         
     - name: Upload IPA to GitHub
       uses: actions/upload-artifact@v4
       with:
         name: iPhone4-App-IPA
-        path: iPhone4Rajzolo.ipa
+        path: "100_Offline_Games.ipa"
