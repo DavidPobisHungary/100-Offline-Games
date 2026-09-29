@@ -25,12 +25,11 @@ jobs:
     - name: Download and Install Unity 5.6.7f1
       run: |
         echo "Starting Unity secure download..."
-        # Download straight into the verified workspace folder
-        curl -L -f -o "$GITHUB_WORKSPACE/UnitySetup.pkg" "https://unity3d.com"
-        echo "Download finished cleanly! Running installer with absolute hard-drive path..."
-        # Using the full absolute path so sudo can find the file instantly!
-        sudo arch -x86_64 installer -pkg "$GITHUB_WORKSPACE/UnitySetup.pkg" -target /
-        rm "$GITHUB_WORKSPACE/UnitySetup.pkg"
+        curl -L -f -o "UnitySetup.pkg" "https://unity3d.com"
+        echo "Download finished cleanly! Forcing installer utility into full Intel mode..."
+        # We place arch -x86_64 BEFORE sudo to force the whole installer system into emulation!
+        arch -x86_64 sudo installer -pkg "UnitySetup.pkg" -target /
+        rm "UnitySetup.pkg"
 
     - name: Run Unity Export
       run: |
