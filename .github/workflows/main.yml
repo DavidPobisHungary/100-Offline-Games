@@ -9,11 +9,11 @@ jobs:
   build-and-compile:
     runs-on: macos-14
     steps:
-    # 1. Pure Git clone without using the broken checkout action
-    - name: Clone Source Code
-      run: |
-        git clone https://github.com{{ github.repository }}.git .
-        git checkout ${{ github.sha }}
+    # 1. Native checkout forced to use internal system tools to bypass Node deprecations
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+      with:
+        set-safe-directory: 'true'
 
     - name: Install Rosetta 2 for Old Intel Unity
       run: |
@@ -21,12 +21,16 @@ jobs:
 
     - name: Download and Install Unity 5.6.7f1
       run: |
+        echo "Unity letöltése..."
+        # This link must be the exact installer package, not the homepage!
         curl -L -f -O "https://unity3d.com"
+        echo "Letöltés kész, telepítés indul..."
         sudo arch -x86_64 installer -pkg Unity-5.6.7f1.pkg -target /
         rm Unity-5.6.7f1.pkg
 
     - name: Run Unity Export
       run: |
+        echo "iOS projekt generálása..."
         arch -x86_64 /Applications/Unity/Unity.app/Contents/MacOS/Unity \
           -batchmode \
           -quit \
@@ -36,22 +40,21 @@ jobs:
           -logFile unity_build.log || true
         cat unity_build.log
 
-    # 2. Straightforward standard IPA layout
-    - name: Package Standard IPA
+    # 2. Package the app bundle into a zipped archive
+    - name: Package IPA
       run: |
         mkdir -p Payload
         find . -name "*.app" -type d | while read -r APP_PATH; do
           if [ -d "$APP_PATH" ]; then
+            echo "Megtalált mappa: $APP_PATH"
             cp -r "$APP_PATH" Payload/
           fi
         done
         zip -r "100_Offline_Games.ipa" Payload
 
-    # 3. Direct curl upload back to GitHub without using upload-artifact action
-    - name: Upload IPA File
-      run: |
-        curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-             -H "Content-Type: application/octet-stream" \
-             --data-binary @"100_Offline_Games.ipa" \
-             "https://github.com{{ github.repository }}/releases" || true
-        echo "Build processing completed."
+    # 3. Save the IPA directly into your GitHub Action run panel so you can click to download it
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iPhone4-App-IPA
+        path: 100_Offline_Games.ipa
