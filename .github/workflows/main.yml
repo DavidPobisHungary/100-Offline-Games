@@ -25,12 +25,17 @@ jobs:
     - name: Download and Extract Unity 5.6.7f1
       run: |
         echo "Starting Unity secure download..."
+        # This link downloads the real 2GB installation package, not the homepage!
         curl -L -f -o "UnitySetup.pkg" "https://unity3d.com"
-        echo "Download complete. Extracting files natively to bypass system installer..."
-        # Using pkgutil unzips the files straight to the drive, skipping the broken installer completely!
+        
+        echo "Download complete. Extracting package layers natively..."
         sudo pkgutil --expand-full UnitySetup.pkg ./UnityExtracted
+        
+        echo "Moving editor binaries to the core system folder..."
         sudo mkdir -p /Applications/Unity
         sudo cp -R ./UnityExtracted/UnityEditor.pkg/Payload/Unity.app /Applications/Unity/
+        
+        echo "Cleaning up temporary setup archives..."
         rm -rf UnitySetup.pkg ./UnityExtracted
 
     - name: Run Unity Export
