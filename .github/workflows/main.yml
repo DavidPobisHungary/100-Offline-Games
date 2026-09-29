@@ -1,72 +1,38 @@
-name: Build iPhone 4 IPA (iOS 7)
+name: Compile iPhone 4 IPA (iOS 7)
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
-
 jobs:
-  build-and-compile:
+  compile-project:
     runs-on: macos-14
     steps:
-    - name: Checkout Source Code
+    - name: Checkout iOS Project Files
       uses: actions/checkout@v4
-      with:
-        set-safe-directory: 'true'
 
-    - name: Install Rosetta 2 for Old Intel Unity
+    - name: Compile Application Binary
       run: |
-        echo "Activating Rosetta 2 emulating layer..."
-        softwareupdate --install-rosetta --agree-to-license || true
+        echo "Building raw application binary from source..."
+        # This builds the raw game binary natively using the Mac's built-in tools!
+        xcodebuild -project Unity-iPhone.xcodeproj \
+                   -scheme Unity-iPhone \
+                   -configuration Release \
+                   -sdk iphoneos \
+                   CODE_SIGNING_ALLOWED=NO \
+                   CODE_SIGNING_REQUIRED=NO \
+                   clean build
 
-    - name: Download and Install Unity 5.6.7f1
+    - name: Assemble IPA Package
       run: |
-        echo "Pulling true editor binary package from official Unity servers..."
-        # This is the exact verified changeset hash for the 5.6.7f1 standalone Mac installer!
-        curl -L -f -o "Unity-5.6.7f1.pkg" "https://unity3d.com"
-        
-        echo "Verifying package integrity..."
-        FILE_SIZE=$(wc -c <"Unity-5.6.7f1.pkg" | tr -d ' ')
-        echo "Downloaded file size: $FILE_SIZE bytes"
-        
-        if [ "$FILE_SIZE" -lt 500000000 ]; then
-          echo "ERROR: Corrupted text download detected! Missing true installer payload."
-          cat "Unity-5.6.7f1.pkg" | head -n 20
-          exit 1
-        fi
-        
-        echo "Package verified! Unpacking system deployment configuration layers..."
-        sudo installer -pkg "Unity-5.6.7f1.pkg" -target /
-        rm "Unity-5.6.7f1.pkg"
-
-    - name: Run Unity Export
-      run: |
-        echo "Compiling project into iOS source code..."
-        arch -x86_64 /Applications/Unity/Unity.app/Contents/MacOS/Unity \
-          -batchmode \
-          -quit \
-          -projectPath . \
-          -buildTarget ios \
-          -executeMethod UnityEditor.BuildPlayerWindow.BuildPlayerAndRun \
-          -logFile unity_build.log || true
-        cat unity_build.log
-
-    - name: Package IPA
-      run: |
-        echo "Wrapping application package..."
+        echo "Packaging standard application layout..."
         mkdir -p Payload
-        find . -name "*.app" -type d | while read -r APP_PATH; do
-          if [ -d "$APP_PATH" ]; then
-            echo "Found bundle directory: $APP_PATH"
-            cp -r "$APP_PATH" Payload/
-          fi
-        done
+        # Moves the freshly compiled .app folder straight into the package path
+        cp -r build/Release-iphoneos/*.app Payload/ 2>/dev/null || cp -r ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos/*.app Payload/
         zip -r "100_Offline_Games.ipa" Payload
 
-    - name: Upload IPA Artifact
+    - name: Upload Finished IPA
       uses: actions/upload-artifact@v4
       with:
         name: iPhone4-App-IPA
