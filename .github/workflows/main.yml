@@ -25,11 +25,12 @@ jobs:
     - name: Download and Install Unity 5.6.7f1
       run: |
         echo "Starting Unity secure download..."
-        # Using lowercase -o forces curl to save it exactly as UnitySetup.pkg without crashing!
-        curl -L -f -o UnitySetup.pkg "https://unity3d.com"
-        echo "Download finished cleanly! Starting background emulator installation..."
-        sudo arch -x86_64 installer -pkg UnitySetup.pkg -target /
-        rm UnitySetup.pkg
+        # Download straight into the verified workspace folder
+        curl -L -f -o "$GITHUB_WORKSPACE/UnitySetup.pkg" "https://unity3d.com"
+        echo "Download finished cleanly! Running installer with absolute hard-drive path..."
+        # Using the full absolute path so sudo can find the file instantly!
+        sudo arch -x86_64 installer -pkg "$GITHUB_WORKSPACE/UnitySetup.pkg" -target /
+        rm "$GITHUB_WORKSPACE/UnitySetup.pkg"
 
     - name: Run Unity Export
       run: |
