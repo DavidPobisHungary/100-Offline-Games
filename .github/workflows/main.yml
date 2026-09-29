@@ -5,7 +5,6 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-# This forces the cloud machine to ignore the Node 20 error and keep running!
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
@@ -20,19 +19,21 @@ jobs:
 
     - name: Install Rosetta 2 for Old Intel Unity
       run: |
+        echo "Activating Rosetta 2 emulating layer..."
         softwareupdate --install-rosetta --agree-to-license || true
 
     - name: Download and Install Unity 5.6.7f1
       run: |
-        echo "Unity letöltése..."
-        curl -L -f -O "https://unity3d.com"
-        echo "Letöltés kész, telepítés indul..."
-        sudo arch -x86_64 installer -pkg Unity-5.6.7f1.pkg -target /
-        rm Unity-5.6.7f1.pkg
+        echo "Starting Unity secure download..."
+        # Using lowercase -o forces curl to save it exactly as UnitySetup.pkg without crashing!
+        curl -L -f -o UnitySetup.pkg "https://unity3d.com"
+        echo "Download finished cleanly! Starting background emulator installation..."
+        sudo arch -x86_64 installer -pkg UnitySetup.pkg -target /
+        rm UnitySetup.pkg
 
     - name: Run Unity Export
       run: |
-        echo "iOS projekt generálása..."
+        echo "Compiling project into iOS source code..."
         arch -x86_64 /Applications/Unity/Unity.app/Contents/MacOS/Unity \
           -batchmode \
           -quit \
@@ -44,10 +45,11 @@ jobs:
 
     - name: Package IPA
       run: |
+        echo "Wrapping application package..."
         mkdir -p Payload
         find . -name "*.app" -type d | while read -r APP_PATH; do
           if [ -d "$APP_PATH" ]; then
-            echo "Megtalált mappa: $APP_PATH"
+            echo "Found bundle directory: $APP_PATH"
             cp -r "$APP_PATH" Payload/
           fi
         done
