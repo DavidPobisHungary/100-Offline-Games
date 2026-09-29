@@ -24,19 +24,21 @@ jobs:
 
     - name: Download and Extract Unity 5.6.7f1
       run: |
-        echo "Starting Unity secure download with Browser-Agent spoofing..."
-        # Using a browser user-agent forces the server to deliver the full 2GB installer file!
-        curl -L -f -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -o "UnitySetup.pkg" "https://unity3d.com"
+        echo "Pulling editor package from permanent archive mirror..."
+        # Using the official long-term storage archive endpoint
+        curl -L -f -o "UnitySetup.pkg" "https://unity3d.com"
         
-        echo "Download complete. Extracting package layers natively..."
-        sudo pkgutil --expand-full UnitySetup.pkg ./UnityExtracted
+        echo "Extracting component payloads directly..."
+        pkgutil --expand "UnitySetup.pkg" ./expanded
         
-        echo "Moving editor binaries to the core system folder..."
+        echo "Unpacking app binaries directly to system applications..."
         sudo mkdir -p /Applications/Unity
-        sudo cp -R ./UnityExtracted/UnityEditor.pkg/Payload/Unity.app /Applications/Unity/
+        cd ./expanded/UnityEditor.pkg
+        tar -xvf Payload -C /Applications/Unity/
         
-        echo "Cleaning up temporary setup archives..."
-        rm -rf UnitySetup.pkg ./UnityExtracted
+        echo "Cleaning work logs..."
+        cd ../..
+        rm -rf UnitySetup.pkg ./expanded
 
     - name: Run Unity Export
       run: |
