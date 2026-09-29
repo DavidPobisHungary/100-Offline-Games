@@ -22,14 +22,16 @@ jobs:
         echo "Activating Rosetta 2 emulating layer..."
         softwareupdate --install-rosetta --agree-to-license || true
 
-    - name: Download and Install Unity 5.6.7f1
+    - name: Download and Extract Unity 5.6.7f1
       run: |
         echo "Starting Unity secure download..."
         curl -L -f -o "UnitySetup.pkg" "https://unity3d.com"
-        echo "Download finished cleanly! Forcing installer utility into full Intel mode..."
-        # We place arch -x86_64 BEFORE sudo to force the whole installer system into emulation!
-        arch -x86_64 sudo installer -pkg "UnitySetup.pkg" -target /
-        rm "UnitySetup.pkg"
+        echo "Download complete. Extracting files natively to bypass system installer..."
+        # Using pkgutil unzips the files straight to the drive, skipping the broken installer completely!
+        sudo pkgutil --expand-full UnitySetup.pkg ./UnityExtracted
+        sudo mkdir -p /Applications/Unity
+        sudo cp -R ./UnityExtracted/UnityEditor.pkg/Payload/Unity.app /Applications/Unity/
+        rm -rf UnitySetup.pkg ./UnityExtracted
 
     - name: Run Unity Export
       run: |
