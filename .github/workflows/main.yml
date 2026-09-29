@@ -24,9 +24,9 @@ jobs:
 
     - name: Download and Extract Unity 5.6.7f1
       run: |
-        echo "Starting Unity secure download..."
-        # This link downloads the real 2GB installation package, not the homepage!
-        curl -L -f -o "UnitySetup.pkg" "https://unity3d.com"
+        echo "Starting Unity secure download with Browser-Agent spoofing..."
+        # Using a browser user-agent forces the server to deliver the full 2GB installer file!
+        curl -L -f -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -o "UnitySetup.pkg" "https://unity3d.com"
         
         echo "Download complete. Extracting package layers natively..."
         sudo pkgutil --expand-full UnitySetup.pkg ./UnityExtracted
