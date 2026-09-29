@@ -9,27 +9,24 @@ jobs:
   build-and-compile:
     runs-on: macos-14
     steps:
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
+    # 1. Pure Git clone without using the broken checkout action
+    - name: Clone Source Code
+      run: |
+        git clone https://github.com{{ github.repository }}.git .
+        git checkout ${{ github.sha }}
 
     - name: Install Rosetta 2 for Old Intel Unity
       run: |
-        echo "Rosetta 2 bekapcsolása..."
         softwareupdate --install-rosetta --agree-to-license || true
 
     - name: Download and Install Unity 5.6.7f1
       run: |
-        echo "Unity letöltése..."
-        # We download the file directly without forcing a broken shortcut name
         curl -L -f -O "https://unity3d.com"
-        echo "Letöltés kész, telepítés indul..."
-        # We use the EXACT name the file has on the disk!
         sudo arch -x86_64 installer -pkg Unity-5.6.7f1.pkg -target /
         rm Unity-5.6.7f1.pkg
 
     - name: Run Unity Export
       run: |
-        echo "iOS projekt generálása indul..."
         arch -x86_64 /Applications/Unity/Unity.app/Contents/MacOS/Unity \
           -batchmode \
           -quit \
@@ -39,19 +36,22 @@ jobs:
           -logFile unity_build.log || true
         cat unity_build.log
 
-    - name: Locate and Package IPA (Filza-Friendly)
+    # 2. Straightforward standard IPA layout
+    - name: Package Standard IPA
       run: |
         mkdir -p Payload
         find . -name "*.app" -type d | while read -r APP_PATH; do
           if [ -d "$APP_PATH" ]; then
-            echo "Megtalált mappa: $APP_PATH"
             cp -r "$APP_PATH" Payload/
           fi
         done
         zip -r "100_Offline_Games.ipa" Payload
-        
-    - name: Upload IPA to GitHub
-      uses: actions/upload-artifact@v4
-      with:
-        name: iPhone4-App-IPA
-        path: "100_Offline_Games.ipa"
+
+    # 3. Direct curl upload back to GitHub without using upload-artifact action
+    - name: Upload IPA File
+      run: |
+        curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+             -H "Content-Type: application/octet-stream" \
+             --data-binary @"100_Offline_Games.ipa" \
+             "https://github.com{{ github.repository }}/releases" || true
+        echo "Build processing completed."
