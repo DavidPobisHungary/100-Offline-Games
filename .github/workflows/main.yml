@@ -1,4 +1,4 @@
-name: Build iPhone 4 IPA (iOS 7)
+name: Compile iPhone 4 IPA (iOS 7)
 
 on:
   push:
@@ -9,65 +9,50 @@ env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 jobs:
-  build-and-compile:
+  compile-project:
     runs-on: macos-14
     steps:
-    - name: Checkout Source Code
+    - name: Checkout iOS Project Files
       uses: actions/checkout@v4
-      with:
-        set-safe-directory: 'true'
 
-    - name: Install Rosetta 2 for Old Intel Unity
+    - name: Compile Application Binary
       run: |
-        echo "Activating Rosetta 2 emulating layer..."
-        softwareupdate --install-rosetta --agree-to-license || true
-
-    - name: Download and Extract Unity 5.6.7f1
-      run: |
-        echo "Pulling editor package from verified CDN mirror..."
-        curl -L -f -o "Unity-5.6.7f1.pkg" "https://unity3d.com"
-        
-        echo "Extracting component payloads directly..."
-        pkgutil --expand "Unity-5.6.7f1.pkg" ./expanded
-        
-        echo "Unpacking app binaries directly to system applications..."
-        sudo mkdir -p /Applications/Unity
-        cd ./expanded/UnityEditor.pkg
-        tar -xvf Payload -C /Applications/Unity/
-        
-        echo "Cleaning work logs..."
-        cd ../..
-        rm -rf Unity-5.6.7f1.pkg ./expanded
-
-    - name: Run Unity Export
-      run: |
-        echo "Searching for the nested Unity project folder..."
-        # This matches the exact subfolder location shown in your screenshot!
+        echo "Navigating directly to the nested directory..."
         cd "100OfflineGames/100OfflineGames"
         
-        echo "Compiling nested project into iOS source code..."
-        arch -x86_64 /Applications/Unity/Unity.app/Contents/MacOS/Unity \
-          -batchmode \
-          -quit \
-          -projectPath . \
-          -buildTarget ios \
-          -executeMethod UnityEditor.BuildPlayerWindow.BuildPlayerAndRun \
-          -logFile unity_build.log || true
-        cat unity_build.log
+        echo "Verifying Xcode project targets..."
+        if [ ! -d "Unity-iPhone.xcodeproj" ]; then
+          echo "ERROR: Unity-iPhone.xcodeproj could not be found inside the directory!"
+          ls -la
+          exit 1
+        fi
+        
+        echo "Commencing native background compilation..."
+        # This compiles the code natively and disables Apple signature checks completely!
+        xcodebuild -project Unity-iPhone.xcodeproj \
+                   -scheme Unity-iPhone \
+                   -configuration Release \
+                   -sdk iphoneos \
+                   CODE_SIGNING_ALLOWED=NO \
+                   CODE_SIGNING_REQUIRED=NO \
+                   clean build
 
-    - name: Package IPA
+    - name: Assemble IPA Package
       run: |
         echo "Wrapping application package..."
         mkdir -p Payload
+        
+        # Scans the build outputs to extract the compiled app bundle
         find . -name "*.app" -type d | while read -r APP_PATH; do
-          if [ -d "$APP_PATH" ]; then
-            echo "Found bundle directory: $APP_PATH"
+          if [[ "$APP_PATH" == *"Release-iphoneos"* ]]; then
+            echo "Found compiled binary bundle: $APP_PATH"
             cp -r "$APP_PATH" Payload/
           fi
         done
+        
         zip -r "100_Offline_Games.ipa" Payload
 
-    - name: Upload IPA Artifact
+    - name: Upload Finished IPA
       uses: actions/upload-artifact@v4
       with:
         name: iPhone4-App-IPA
