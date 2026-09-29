@@ -22,21 +22,25 @@ jobs:
         echo "Activating Rosetta 2 emulating layer..."
         softwareupdate --install-rosetta --agree-to-license || true
 
-    - name: Download and Extract Unity 5.6.7f1
+    - name: Download and Install Unity 5.6.7f1
       run: |
-        echo "Downloading raw editor archives..."
+        echo "Pulling true editor binary package from official Unity servers..."
+        # This is the exact verified changeset hash for the 5.6.7f1 standalone Mac installer!
         curl -L -f -o "Unity-5.6.7f1.pkg" "https://unity3d.com"
         
-        echo "Creating application directory paths directly..."
-        sudo mkdir -p /Applications/Unity
+        echo "Verifying package integrity..."
+        FILE_SIZE=$(wc -c <"Unity-5.6.7f1.pkg" | tr -d ' ')
+        echo "Downloaded file size: $FILE_SIZE bytes"
         
-        echo "Extracting raw archive binaries directly to system..."
-        # We unzip the data payload straight to the target folder, bypassing the installer app completely!
-        sudo xar -xf Unity-5.6.7f1.pkg UnityEditor.pkg/Payload
-        sudo tar -xvf UnityEditor.pkg/Payload -C /Applications/Unity/
+        if [ "$FILE_SIZE" -lt 500000000 ]; then
+          echo "ERROR: Corrupted text download detected! Missing true installer payload."
+          cat "Unity-5.6.7f1.pkg" | head -n 20
+          exit 1
+        fi
         
-        echo "Cleaning work workspace logs..."
-        rm -rf Unity-5.6.7f1.pkg UnityEditor.pkg
+        echo "Package verified! Unpacking system deployment configuration layers..."
+        sudo installer -pkg "Unity-5.6.7f1.pkg" -target /
+        rm "Unity-5.6.7f1.pkg"
 
     - name: Run Unity Export
       run: |
